@@ -3,11 +3,11 @@
 FROM node:20-alpine as client-builder
 WORKDIR /app/client
 
-# 复制前端 package.json 并安装依赖
+# 1. 安装前端依赖 (保留 devDependencies 以便运行 vite)
 COPY client/package*.json ./
-RUN npm install
+RUN npm ci
 
-# 复制前端源代码并构建 (生成 dist 文件夹)
+# 2. 拷贝源码并构建(生成 dist 文件夹)
 COPY client/ ./
 RUN npm run build
 
@@ -16,14 +16,15 @@ RUN npm run build
 FROM node:20-alpine
 WORKDIR /app
 
-# 复制后端 package.json 并安装生产依赖
+# 3. 复制后端 package.json 并安装后端依赖 (仅生产依赖，为了极速和轻量)
+# 这一步完全不受前端代码修改的影响，缓存利用率 MAX
 COPY package*.json ./
-RUN npm install --production
+RUN npm ci --omit=dev
 
-# 复制后端代码
+# 4. 拷贝后端代码
 COPY server.js ./
 
-# 把 Stage 1 构建好的前端 dist 文件夹拷过来
+# 5. 最后才把 Stage 1 构建好的前端 dist 文件夹拷过来
 COPY --from=client-builder /app/client/dist ./client/dist
 
 # 设置环境变量为生产模式
