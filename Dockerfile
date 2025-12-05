@@ -1,5 +1,5 @@
 # --- Stage 1: 构建前端 ---
-FROM oven/bun:1 as client-builder
+FROM oven/bun:1 AS client-builder
 WORKDIR /app/client
 
 # 1. 拷贝依赖定义 (仓库使用 bun.lock)
