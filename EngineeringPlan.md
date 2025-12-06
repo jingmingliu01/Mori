@@ -1,149 +1,81 @@
-这是一个非常棒的里程碑！你已经完成了“行走的骨架（Walking Skeleton）”，接下来的工作就是往骨架上填肉。
+# Mori 迭代式实施蓝图（Kinopio + 中心节点锚定）
 
-为了确保你（以及之后协助你的任何 AI）能无缝衔接，我为你制定了这份\*\*“Mori 工程实施蓝图 (Mori Engineering Blueprint)”\*\*。
+> 目标：做一个 Kinopio 风格的数字花园，但所有节点在结构上都围绕一个中心节点（Core）相连；视觉是纸质/便利贴而非太空。
 
-这份文档采用了**高上下文、低歧义**的格式编写。在接下来的开发中，你可以直接把这份文档的对应部分发给 AI，要求它生成代码。
+## 0. 项目上下文
+- **隐喻**：纸质桌面/便利贴拼贴，核心头像是桌面的锚点，其他节点散落但逻辑上都挂在核心上。
+- **技术栈**：Vue 3 + Vite + Vue Flow；Bun/Node；Express；MongoDB Atlas；Cloudinary。
+- **数据理念（local-first）**：参考 Kinopio 的公开仓库思路，始终本地优先（Local Storage 快速落盘、可离线），其后再与远端同步；即便接入数据库后也保持 local-first。
+- **开发命令**：`bun dev`（并行启动 server/client）或进入 `client` 用 `bun dev`。
 
------
+## 1. 迭代路线（由浅入深）
 
-# 🚀 Mori (MVP) 工程实施蓝图
+### 1.0 已有脚手架（基线）
+- Vite + Vue 3 + Bun 运行通路已通；Docker 可运行。
 
-## 0\. 项目上下文 (Context for AI)
+### 1.1 Visual Core MVP（无存储，仅交互）
+- **要求**：
+  - 画布：Kinopio 纸质背景（浅色纸感、淡噪声/网点）；隐藏控件；允许平移缩放。
+  - 核心节点：初始化在 (0,0)，特殊样式（头像卡/更醒目便利贴）。
+  - 节点：便利贴/纸片风格，手写/随意字体，细阴影，轻微随机旋转（±2°）。
+  - 连接点：隐藏。
+  - 添加节点：按钮生成新节点，位置在核心周围随机环带；自动创建一条从核心到新节点的浅色虚线（手绘草稿线感）。可以允许节点再连子节点，但默认始终有一条核心连线。
+- **输出**：`MoriCanvas.vue` + `MoriNode.vue`，可拖动、可缩放、可添加。
 
-  * **项目名称:** Mori (基于 Galaxy/Star 拓扑结构的数字花园)
-  * **核心隐喻:** 所有的想法（Nodes）都是围绕核心（Avatar）旋转的卫星。
-  * **技术栈:**
-      * **Frontend:** Vue 3 (Script Setup), Vite, TailwindCSS (可选), **Vue Flow (核心画布库)**。
-      * **Backend:** Node.js + Express (Monolith 架构，托管静态前端)。
-      * **Database:** MongoDB Atlas (Mongoose ORM)。
-      * **Media:** Cloudinary (Unsigned Upload)。
-      * **Deploy:** Docker + Render (Web Service)。
-  * **当前进度:** 基础脚手架已跑通，Docker 部署成功，Atlas/Cloudinary 已配置。
+### 1.2 轻量编辑体验
+- 节点标题可直接点击编辑（textarea/input）。
+- 节点支持删除（小叉/快捷键）。
+- 连线保持自动：删除节点自动移除相关边；若有子节点链路，仍保留核心连线或重新连到核心。
 
------
+### 1.3 本地持久化（Local-first Snapshot）
+- 使用 Local Storage 存储完整 `nodes` / `edges` 快照（key 如 `mori:universe`），加载时优先从本地恢复，没有则创建核心节点。
+- 监听 Vue Flow 变更，debounce 1–2s 自动写入本地；状态提示 “Saving…” -> “Saved”。
+- 可加版本/时间戳，避免老数据覆盖新数据（简单比较 `updatedAt`）。
+- 目标：离线可用，刷新不丢。
 
-## Phase 1: 前端画布核心 (The Visual Core)
+### 1.4 远端同步（Memory）
+- 后端：`Universe` 文档（userId 写死 demo-user），存 `nodes` / `edges`。
+- API：`GET /api/universe`（无则返回仅核心节点）；`POST /api/universe` 覆盖保存。
+- 同步策略：启动时先用本地数据渲染，再请求远端；若远端比本地新且用户未修改，替换/合并；本地修改后优先写本地，再 debounce 推送远端。冲突策略简单采用“最新时间戳覆盖”即可（MVP）。
 
-**目标:** 实现基于 Vue Flow 的交互式画布，完成“星系”布局逻辑。
+### 1.5 媒体扩展
+- 节点可上传图片（Cloudinary unsigned）；成功后写入 `node.data.image` 并触发本地/远端保存。
 
-### 1.1 引入 Vue Flow
+### 1.6 体验打磨
+- 对齐/网格吸附开关、轻微抖动动画、选中高光、边线色盘、键盘快捷键（新增/删除/复制）。
 
-  * **Action:** 安装 `@vue-flow/core` 和 `@vue-flow/background`。
-  * **配置:**
-      * 禁用默认的连线交互（用户不能手动连线）。
-      * 启用 `pan` (平移) 和 `zoom` (缩放)。
-      * 隐藏默认的 `Controls` 和 `Minimap` (保持界面极简，MVP 后期再加)。
+## 2. 详细拆解（当前聚焦 1.1）
 
-### 1.2 自定义节点 (Custom Node Component)
+### 2.1 MoriNode.vue（便利贴卡片）
+- Props: `label: string; image?: string; isCore?: boolean`.
+- 样式要点：
+  - 纸质底：浅米/浅灰背景 + 细噪声/渐变；圆角；细阴影。
+  - 手写字体优先（如 Caveat/Handlee），退化到常规无衬线。
+  - 轻微随机旋转可通过内联 style 在节点 data 中设置（例如 `data.tilt`），初始创建时生成。
+  - 连接点隐藏（Handle opacity 0）。
 
-  * **组件名:** `MoriNode.vue`
-  * **功能:**
-      * **展示:** 渲染文本内容和图片（如果有）。
-      * **样式:** 必须去“工业化”。移除标准边框，使用圆角、阴影、手写字体。
-      * **Handle (连接点):** 设为 `opacity: 0` 或通过 CSS 隐藏（我们不需要用户看到连接点，因为连线是自动的）。
-  * **数据结构 (Props):**
-    ```typescript
-    interface NodeData {
-      label: string;      // 文本内容
-      image?: string;     // 图片 URL (Cloudinary)
-      isCore?: boolean;   // 是否是核心头像节点
-    }
-    ```
+### 2.2 MoriCanvas.vue（画布 + 逻辑）
+- 初始化核心节点（id: `core`, pos (0,0), type: `moriNode`, `isCore: true`）。
+- NodeTypes 注册自定义节点。
+- 添加按钮：
+  - 计算随机环带位置（可配置半径范围，避免太近/太远）。
+  - 生成 `tilt` 随机值存 data。
+  - 创建节点 + 一条核心虚线边（浅灰/浅褐，虚线）。
+- 交互：pan/zoom 开启；连接、更新连线交互禁用；控件隐藏。
+- 背景：淡纸色，必要时自定义背景层替代 Vue Flow 默认背景。
 
-### 1.3 核心交互逻辑 (The Gravity Logic)
+### 2.3 Local-first 细节（针对 1.3 / 1.4）
+- Local Storage key 建议：`mori:universe:v1`。
+- 写入策略：监听 nodes/edges 变化 -> debounce 1–2s -> JSON.stringify 存本地；附 `updatedAt`。
+- 读取策略：启动时先读本地；无则生成核心节点；随后异步请求远端，若远端新，则替换/合并（以时间戳为准）。
+- 同步 UI：右下角状态 “Saving…”/“Saved”；远端失败不阻塞本地使用，可提示“离线模式”。
+- 参考 Kinopio：快速落盘、可离线、UI 反馈及时；我们用 Vue Flow +快照式存储实现同样的体验节奏。
 
-  * **初始化:** 画布加载时，自动在中心 `(0, 0)` 生成一个 **Core Node** (用户头像)。
-  * **添加节点 (Add Idea):**
-      * 点击“添加”按钮。
-      * **位置算法:** 在核心节点周围随机半径 R 的圆周上生成新节点坐标 `(x, y)`。
-      * **自动连线:** 同步生成一条 Edge，`source: CORE_ID`, `target: NEW_NODE_ID`。
-      * **样式:** Edge 需要设置为虚线或浅色，模仿“引力线”。
+### 2.4 验收标准（1.1）
+- 页面加载有核心节点，样式明显。
+- 点击添加按钮，节点出现在核心周围随机位置，并被一条虚线连到核心。
+- 节点可拖动；画布可平移/缩放。
+- UI 无太空/银河视觉元素，整体更像纸质桌面。
 
------
-
-## Phase 2: 后端与数据持久化 (The Memory)
-
-**目标:** 实现整板数据的存取，确保刷新页面不丢失。
-
-### 2.1 Mongoose Schema 设计
-
-为了 MVP 极速开发，我们采用 **“快照式存储”** (Document per User/Board)。
-
-  * **Model:** `Universe`
-  * **Schema 定义:**
-    ```javascript
-    const UniverseSchema = new mongoose.Schema({
-      userId: { type: String, default: 'demo-user', unique: true }, // MVP 写死
-      nodes: { type: Array, default: [] }, // 直接存 Vue Flow 的 nodes 数组
-      edges: { type: Array, default: [] }, // 直接存 Vue Flow 的 edges 数组
-      lastUpdated: { type: Date, default: Date.now }
-    });
-    ```
-
-### 2.2 API 接口
-
-  * `GET /api/universe`: 获取当前用户的 nodes 和 edges。如果不存在，返回初始化的“只有核心头像”的数据。
-  * `POST /api/universe`: 接收完整的 `{ nodes, edges }` JSON 并覆盖更新 (Upsert)。
-
-### 2.3 前端数据同步 (Auto-Save)
-
-  * **状态管理:** 使用 `ref` 或 Pinia 存储 `nodes` 和 `edges`。
-  * **监听:** 监听 Vue Flow 的 `onNodesChange` 和 `onEdgesChange` 事件。
-  * **防抖 (Debounce):** 使用 `lodash.debounce` (比如 2000ms)。当用户停止拖拽/编辑 2 秒后，自动触发 `POST /api/universe`。
-  * **状态反馈:** 界面右下角显示 "Saving..." -\> "Saved"。
-
------
-
-## Phase 3: 多媒体支持 (The Rich Content)
-
-**目标:** 让节点支持图片上传。
-
-### 3.1 Cloudinary 集成
-
-  * **组件:** 创建 `ImageUploader.vue`。
-  * **逻辑:**
-      * 使用 HTML `<input type="file">` 选择图片。
-      * 调用 Cloudinary Upload API (使用之前配置的 Unsigned Preset)。
-      * **关键:** 不要经过后端，前端直接传。
-  * **回调:** 上传成功后，获取 `secure_url`。
-
-### 3.2 节点更新逻辑
-
-  * 当用户在 `MoriNode` 上传图片成功后：
-    1.  更新该 Node 的 data (`node.data.image = url`)。
-    2.  触发 Vue Flow 的更新机制。
-    3.  触发上面的 Auto-Save 逻辑存入 MongoDB。
-
------
-
-## Phase 4: 交付与部署 (Delivery)
-
-**目标:** 上线给朋友看。
-
-### 4.1 生产环境检查
-
-  * **Env Vars:** 确保 Render 后台配置了 `MONGODB_URI`。
-  * **Build:** 确保 Dockerfile 的 `npm run build` 能正确打包最新的前端代码。
-
-### 4.2 演示数据 (Seed Data)
-
-  * 编写一个脚本或在本地运行一次，手动创建一个漂亮的“Mori 介绍”星系（包含几个说明节点和图片）。
-  * 这就是用户第一次打开时看到的默认状态。
-
------
-
-## ✅ 下一步行动建议
-
-现在的工程路径非常清晰。我们应该从 **Phase 1: 前端画布核心** 开始。
-
-**请复制以下 Prompt 发送给我（或任何 AI），开始写第一行核心代码：**
-
-> “Context: 我正在开发 Mori，一个基于 Vue 3 + Vue Flow 的星系风格脑图。
->
-> Task: 请帮我初始化 Vue Flow 画布。
-> Requirements:
->
-> 1.  创建一个 `MoriCanvas.vue` 组件。
-> 2.  初始化数据：屏幕中心有一个 ID 为 'core' 的节点（Type: 'custom'），内容是 'Me'。
-> 3.  实现一个 'Add Node' 按钮，点击后在核心周围随机位置生成一个新节点，并自动生成一条连向核心的 Edge。
-> 4.  请提供完整的 Vue 组件代码。”
+## 3. 后续提示模板（给 AI 使用）
+- “生成 Kinopio 风格的 Vue Flow 画布，核心节点在中心，添加按钮生成环带位置的新节点并自动用虚线连到核心；节点纸质/手写风格，隐藏 handles。”

@@ -1,1 +1,1 @@
-# Mori---Your-Digital-Garden
+# Mori
