@@ -244,16 +244,16 @@ provide('moriNodeActions', {
   <section class="canvas-shell">
     <div class="overlay header">
       <div>
-        <p class="eyebrow">Visual Core · Kinopio style</p>
+        <p class="eyebrow">Visual Core - Kinopio style</p>
         <h1>Scatter ideas around your anchor</h1>
         <p class="lede">
-          便利贴桌面，轻盈拖拽。所有节点都和核心相连，像在纸面上随手贴出的思绪。
+          A sticky-note desk made for light drag-and-drop. Every node connects back to the core, like thoughts casually pinned on paper.
         </p>
       </div>
     </div>
 
     <div class="overlay controls">
-      <button class="add-btn" type="button" @click="addNode">+ 添加节点</button>
+      <button class="add-btn" type="button" @click="addNode">+ Add node</button>
     </div>
 
     <VueFlow

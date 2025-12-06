@@ -1,30 +1,30 @@
-# --- Stage 1: 构建前端 ---
+# --- Stage 1: Build frontend ---
 FROM oven/bun:1 AS client-builder
 WORKDIR /app/client
 
-# 1. 拷贝依赖定义 (仓库使用 bun.lock)
+# 1. Copy dependency definitions (repo uses bun.lock)
 COPY client/package.json client/bun.lock ./
 RUN bun ci
 
-# 2. 构建
+# 2. Build
 COPY client/ ./
 RUN bun run build
 
-# --- Stage 2: 运行后端 ---
+# --- Stage 2: Run backend ---
 FROM oven/bun:1
 WORKDIR /app
 
-# 3. 后端依赖
+# 3. Backend dependencies
 COPY package.json bun.lock ./
-# Bun 默认就是生产模式安装，不需要 --omit=dev 这种复杂参数
+# Bun installs production by default; no need for extra --omit=dev flags
 RUN bun ci --production
 
-# 4. 代码与产物
+# 4. Code and assets
 COPY server.js ./
 COPY --from=client-builder /app/client/dist ./client/dist
 
 ENV NODE_ENV=production
 EXPOSE 3000
 
-# 5. 启动
+# 5. Launch
 CMD ["bun", "server.js"]
