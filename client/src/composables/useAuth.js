@@ -140,6 +140,8 @@ export function useAuth() {
   const logout = () => {
     logger.info(LogCategory.AUTH, 'User logout initiated', { email: user.value?.email })
     clearAuth()
+    // Clear canvas localStorage to prevent data leakage to next user
+    localStorage.removeItem('mori:universe:v2')
     logger.success(LogCategory.AUTH, 'User logged out successfully')
   }
 
