@@ -4,7 +4,7 @@ import MoriCanvas from './components/MoriCanvas.vue'
 import AuthModal from './components/AuthModal.vue'
 import { useAuth } from './composables/useAuth'
 
-const { user, isAuthenticated, logout, getAuthHeaders } = useAuth()
+const { user, isAuthenticated, initializing, logout, getAuthHeaders } = useAuth()
 
 const showAuthModal = ref(false)
 
@@ -15,14 +15,14 @@ const handleLogout = () => {
 }
 
 // Provide auth helpers to child components
-provide('auth', { user, isAuthenticated, getAuthHeaders })
+provide('auth', { user, isAuthenticated, initializing, getAuthHeaders })
 </script>
 
 <template>
   <main class="app-shell">
     <MoriCanvas />
     
-    <div class="user-controls">
+    <div class="user-controls" v-if="!initializing">
       <template v-if="isAuthenticated">
         <span class="user-name">{{ user?.name || user?.email }}</span>
         <button class="user-btn logout" type="button" @click="handleLogout">

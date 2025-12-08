@@ -5,6 +5,7 @@ import { Background } from '@vue-flow/background'
 import MoriNode from './MoriNode.vue'
 import CanvasSwitcher from './CanvasSwitcher.vue'
 import { useCloudinary } from '../composables/useCloudinary'
+import { logger, LogCategory } from '../utils/logger'
 
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
@@ -407,7 +408,7 @@ const switchCanvas = async (canvasId) => {
     }
     
     if (!canvas) {
-      console.warn('Canvas not found:', canvasId)
+      logger.warn(LogCategory.CANVAS, 'Canvas not found', { canvasId })
       saveState.value = 'idle'
       restoring = false
       return
@@ -424,11 +425,13 @@ const switchCanvas = async (canvasId) => {
     // Update localStorage
     persistLocal()
     
+    logger.success(LogCategory.CANVAS, 'Switched to canvas', { canvasId: canvas._id, name: canvas.name, nodeCount: nodes.value.length })
+    
     saveState.value = 'saved'
     setTimeout(() => (saveState.value = 'idle'), 1000)
     setTimeout(fitAll, 100)
   } catch (err) {
-    console.warn('Switch canvas failed:', err)
+    logger.error(LogCategory.CANVAS, 'Switch canvas failed', { canvasId, error: err.message })
     saveState.value = 'offline'
   } finally {
     restoring = false
@@ -439,6 +442,7 @@ const switchCanvas = async (canvasId) => {
 const syncAfterAuth = async () => {
   if (!auth.isAuthenticated.value) return
   
+  logger.info(LogCategory.SYNC, 'Starting sync after authentication')
   saveState.value = 'syncing'
   restoring = true
   
@@ -446,6 +450,7 @@ const syncAfterAuth = async () => {
     // Fetch remote canvas list
     const remoteList = await fetchCanvasList()
     const localCanvases = getAllLocalCanvases()
+    logger.info(LogCategory.SYNC, 'Fetched canvas lists', { remoteCount: remoteList.length, localCount: localCanvases.length })
     
     // Sync each local canvas
     for (const localCanvas of localCanvases) {
@@ -522,9 +527,10 @@ const syncAfterAuth = async () => {
     persistLocal()
     
     saveState.value = 'synced'
+    logger.success(LogCategory.SYNC, 'Sync completed successfully', { canvasCount: canvasList.value.length })
     setTimeout(() => (saveState.value = 'idle'), 1000)
   } catch (err) {
-    console.warn('Sync after auth failed:', err)
+    logger.error(LogCategory.SYNC, 'Sync failed', { error: err.message })
     saveState.value = 'offline'
   } finally {
     restoring = false
@@ -533,10 +539,13 @@ const syncAfterAuth = async () => {
 
 // Handle canvas switcher events
 const handleCanvasSwitch = (canvasId) => {
+  logger.info(LogCategory.CANVAS, 'Switching canvas', { from: currentCanvasId.value, to: canvasId })
   switchCanvas(canvasId)
 }
 
 const handleCanvasCreate = async () => {
+  logger.info(LogCategory.CANVAS, 'Creating new canvas', { isOnline: auth.isAuthenticated.value })
+  
   // Create new canvas with just the default core node
   const defaultNodes = [{
     id: 'core',
@@ -564,11 +573,17 @@ const handleCanvasCreate = async () => {
   
   if (newCanvasId) {
     canvasList.value.unshift({ _id: newCanvasId, name: newCanvasName, updatedAt: now, nodeCount: 1 })
+    logger.success(LogCategory.CANVAS, 'Canvas created', { canvasId: newCanvasId, name: newCanvasName })
     await switchCanvas(newCanvasId)
+  } else {
+    logger.error(LogCategory.CANVAS, 'Failed to create canvas')
   }
 }
 
 const handleCanvasRename = async ({ id, name }) => {
+  const oldName = canvasList.value.find(c => c._id === id)?.name
+  logger.info(LogCategory.CANVAS, 'Renaming canvas', { canvasId: id, from: oldName, to: name })
+  
   // Always update locally first
   renameLocalCanvas(id, name)
   
@@ -581,9 +596,14 @@ const handleCanvasRename = async ({ id, name }) => {
   if (auth.isAuthenticated.value && !id.startsWith('local-')) {
     await renameCanvas(id, name)
   }
+  
+  logger.success(LogCategory.CANVAS, 'Canvas renamed', { canvasId: id, name })
 }
 
 const handleCanvasDelete = async (canvasId) => {
+  const canvasToDelete = canvasList.value.find(c => c._id === canvasId)
+  logger.info(LogCategory.CANVAS, 'Deleting canvas', { canvasId, name: canvasToDelete?.name })
+  
   // Delete locally first
   deleteLocalCanvas(canvasId)
   
@@ -594,6 +614,8 @@ const handleCanvasDelete = async (canvasId) => {
   if (auth.isAuthenticated.value && !canvasId.startsWith('local-')) {
     await deleteCanvas(canvasId)
   }
+  
+  logger.success(LogCategory.CANVAS, 'Canvas deleted', { canvasId, name: canvasToDelete?.name })
   
   // If deleted current canvas, switch to another
   if (canvasId === currentCanvasId.value) {
@@ -671,6 +693,9 @@ const handleConnect = (connection) => {
       style: defaultEdgeOptions.style,
     },
   ]
+  
+  logger.success(LogCategory.EDGE, 'Edge created', { edgeId: id, source, target, canvasId: currentCanvasId.value })
+  
   saveState.value = 'saving'
   setTimeout(fitAll, 120)
 }
@@ -732,6 +757,8 @@ const addNode = () => {
     },
   ]
 
+  logger.success(LogCategory.NODE, 'Node added via button', { nodeId: id, label, canvasId: currentCanvasId.value })
+
   saveState.value = 'saving'
   persistLocal()
 }
@@ -765,6 +792,13 @@ const addNodeAtPosition = (position, options = {}) => {
       style: defaultEdgeOptions.style,
     },
   ]
+
+  logger.success(LogCategory.NODE, 'Node added at position', { 
+    nodeId: id, 
+    position: { x: Math.round(position.x), y: Math.round(position.y) },
+    hasImage: !!options.image,
+    canvasId: currentCanvasId.value 
+  })
 
   saveState.value = 'saving'
   persistLocal()
@@ -800,6 +834,8 @@ const handlePaste = async (event) => {
       const file = item.getAsFile()
       if (!file) continue
 
+      logger.info(LogCategory.IMAGE, 'Image paste detected', { type: item.type, size: file.size })
+
       // Create node at center of viewport first (with loading state)
       const centerPosition = screenToFlowCoordinate({
         x: window.innerWidth / 2,
@@ -810,6 +846,7 @@ const handlePaste = async (event) => {
       
       // Upload to Cloudinary if configured
       if (isCloudinaryConfigured()) {
+        logger.info(LogCategory.IMAGE, 'Uploading image to Cloudinary', { nodeId })
         const imageUrl = await uploadImage(file)
         if (imageUrl) {
           // Update node with image
@@ -818,6 +855,7 @@ const handlePaste = async (event) => {
               ? { ...node, data: { ...node.data, label: '', image: imageUrl } }
               : node
           )
+          logger.success(LogCategory.IMAGE, 'Image uploaded successfully', { nodeId, url: imageUrl.substring(0, 50) + '...' })
           persistLocal()
         } else {
           // Upload failed
@@ -826,9 +864,11 @@ const handlePaste = async (event) => {
               ? { ...node, data: { ...node.data, label: 'Image upload failed' } }
               : node
           )
+          logger.error(LogCategory.IMAGE, 'Image upload failed', { nodeId })
         }
       } else {
         // Cloudinary not configured - use local data URL
+        logger.info(LogCategory.IMAGE, 'Using local data URL (Cloudinary not configured)', { nodeId })
         const reader = new FileReader()
         reader.onload = (e) => {
           nodes.value = nodes.value.map((node) =>
@@ -836,6 +876,7 @@ const handlePaste = async (event) => {
               ? { ...node, data: { ...node.data, label: '', image: e.target.result } }
               : node
           )
+          logger.success(LogCategory.IMAGE, 'Image stored as data URL', { nodeId })
           persistLocal()
         }
         reader.readAsDataURL(file)
@@ -865,9 +906,20 @@ const clearNewFlag = (id) => {
 }
 
 const removeNode = (id) => {
-  if (id === 'core') return
+  if (id === 'core') {
+    logger.warn(LogCategory.NODE, 'Attempted to delete core node (blocked)', { canvasId: currentCanvasId.value })
+    return
+  }
+  const nodeToRemove = nodes.value.find((node) => node.id === id)
   nodes.value = nodes.value.filter((node) => node.id !== id)
   edges.value = edges.value.filter((edge) => edge.source !== id && edge.target !== id)
+  
+  logger.success(LogCategory.NODE, 'Node deleted', { 
+    nodeId: id, 
+    label: nodeToRemove?.data?.label,
+    canvasId: currentCanvasId.value 
+  })
+  
   setTimeout(fitAll, 80)
 }
 

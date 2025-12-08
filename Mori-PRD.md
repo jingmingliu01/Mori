@@ -1,6 +1,6 @@
 # Mori - Product Requirements Document
 
-> 最后更新：2024-12-08
+> 最后更新：2025-12-08
 
 ## 产品概述
 
@@ -83,6 +83,7 @@
 |------|------|------|
 | 用户注册 | ✅ Done | 邮箱 + 密码注册 |
 | 用户登录 | ✅ Done | JWT token 认证 |
+| Token 验证 | ✅ Done | 应用初始化时验证 token 有效性，无效则自动登出 |
 | 云端存储 | ✅ Done | MongoDB Atlas 存储 |
 | 自动同步 | ✅ Done | 登录后自动同步所有画布到云端 |
 | 全量同步 | ✅ Done | 登录时同步所有本地画布：ID匹配则时间戳决定胜负，本地新画布推送到云端 |
@@ -97,6 +98,14 @@
 | 图片预览 | ✅ Done | 节点内显示图片缩略图 |
 | 图片删除 | ✅ Done | 悬停显示删除按钮 |
 | 粘贴上传 | ✅ Done | 画布上粘贴图片自动上传 |
+
+### 7. 开发者工具 (Developer Tools)
+
+| 功能 | 状态 | 描述 |
+|------|------|------|
+| 综合日志 | ✅ Done | 彩色控制台日志，覆盖 Auth/Canvas/Node/Edge/Sync/Image 操作 |
+| 日志分级 | ✅ Done | info/success/warn/error 四级日志 |
+| 时间戳 | ✅ Done | ISO 格式时间戳便于调试 |
 
 ---
 
@@ -240,6 +249,19 @@ NODE_ENV=development
 ---
 
 ## 更新日志
+
+### 2025-12-08 (v7)
+- **Token 验证**：应用初始化时自动验证 localStorage 中的 JWT token
+  - 调用 `/api/auth/me` 验证 token 有效性
+  - 无效 token 自动清除，用户显示为未登录状态
+  - 新增 `initializing` 状态，防止 UI 闪烁
+- **综合日志系统**：新增 `logger.js` 工具，为重要操作添加彩色控制台日志
+  - Auth 类：登录、登出、注册、token 验证
+  - Canvas 类：创建、切换、重命名、删除画布
+  - Node 类：添加、删除节点
+  - Edge 类：创建连接
+  - Sync 类：同步操作
+  - Image 类：图片粘贴上传
 
 ### 2024-12-08 (v6)
 - **离线多画布支持**：未登录/离线状态也支持完整的多画布管理
