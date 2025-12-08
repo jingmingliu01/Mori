@@ -5,7 +5,12 @@ const universeSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
-    unique: true,
+    // No unique constraint - users can have multiple canvases
+  },
+  name: {
+    type: String,
+    default: 'Untitled',
+    trim: true,
   },
   nodes: {
     type: Array,
@@ -15,11 +20,18 @@ const universeSchema = new mongoose.Schema({
     type: Array,
     default: [],
   },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
   updatedAt: {
     type: Date,
     default: Date.now,
   },
 });
+
+// Add compound index for efficient queries
+universeSchema.index({ userId: 1, updatedAt: -1 });
 
 // Update the updatedAt timestamp on save
 universeSchema.pre('save', function () {
@@ -29,4 +41,3 @@ universeSchema.pre('save', function () {
 const Universe = mongoose.model('Universe', universeSchema);
 
 export default Universe;
-

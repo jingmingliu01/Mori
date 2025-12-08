@@ -72,7 +72,8 @@ const authenticate = async (req, res, next) => {
 };
 
 // Helper to create default core node
-const createDefaultUniverse = () => ({
+const createDefaultUniverse = (name = 'My First Canvas') => ({
+  name,
   nodes: [
     {
       id: 'core',
@@ -163,79 +164,136 @@ app.get('/api/auth/me', authenticate, (req, res) => {
   res.json({ user: req.user.toJSON() });
 });
 
-// Universe: Get user's universe
-app.get('/api/universe', authenticate, async (req, res) => {
+// ============================================
+// Multi-Canvas API Endpoints
+// ============================================
+
+// List all user's canvases (metadata only)
+app.get('/api/universes', authenticate, async (req, res) => {
   try {
-    let universe = await Universe.findOne({ userId: req.user._id });
+    const universes = await Universe.find({ userId: req.user._id })
+      .sort({ updatedAt: -1 })
+      .select('_id name updatedAt createdAt nodes');
     
-    // Create default universe if none exists
-    if (!universe) {
-      universe = new Universe({
-        userId: req.user._id,
-        ...createDefaultUniverse(),
-      });
-      await universe.save();
-    }
+    // Return metadata with node count
+    const list = universes.map(u => ({
+      _id: u._id,
+      name: u.name,
+      updatedAt: u.updatedAt.getTime(),
+      createdAt: u.createdAt?.getTime() || u.updatedAt.getTime(),
+      nodeCount: u.nodes?.length || 0,
+    }));
     
-    res.json({
-      nodes: universe.nodes,
-      edges: universe.edges,
-      updatedAt: universe.updatedAt.getTime(),
-    });
+    res.json(list);
   } catch (err) {
-    console.error('Get universe error:', err);
-    res.status(500).json({ error: 'Server error fetching universe' });
+    console.error('List universes error:', err);
+    res.status(500).json({ error: 'Server error listing canvases' });
   }
 });
 
-// Universe: Save/update user's universe
-app.post('/api/universe', authenticate, async (req, res) => {
+// Create new canvas
+app.post('/api/universes', authenticate, async (req, res) => {
   try {
-    const { nodes, edges, updatedAt } = req.body;
+    const { name, nodes, edges } = req.body;
     
-    if (!nodes || !Array.isArray(nodes)) {
-      return res.status(400).json({ error: 'Nodes array required' });
-    }
+    const universe = new Universe({
+      userId: req.user._id,
+      name: name || 'Untitled',
+      nodes: nodes || createDefaultUniverse().nodes,
+      edges: edges || [],
+    });
+    await universe.save();
     
-    let universe = await Universe.findOne({ userId: req.user._id });
+    res.status(201).json({
+      _id: universe._id,
+      name: universe.name,
+      nodes: universe.nodes,
+      edges: universe.edges,
+      updatedAt: universe.updatedAt.getTime(),
+      createdAt: universe.createdAt.getTime(),
+    });
+  } catch (err) {
+    console.error('Create universe error:', err);
+    res.status(500).json({ error: 'Server error creating canvas' });
+  }
+});
+
+// Get specific canvas
+app.get('/api/universe/:id', authenticate, async (req, res) => {
+  try {
+    const universe = await Universe.findOne({
+      _id: req.params.id,
+      userId: req.user._id,
+    });
     
-    if (universe) {
-      // Simple conflict resolution: latest timestamp wins
-      const clientTime = updatedAt || Date.now();
-      const serverTime = universe.updatedAt.getTime();
-      
-      if (clientTime < serverTime) {
-        // Client data is older, return server data
-        return res.status(409).json({
-          conflict: true,
-          nodes: universe.nodes,
-          edges: universe.edges,
-          updatedAt: serverTime,
-        });
-      }
-      
-      // Update existing universe
-      universe.nodes = nodes;
-      universe.edges = edges || [];
-      await universe.save();
-    } else {
-      // Create new universe
-      universe = new Universe({
-        userId: req.user._id,
-        nodes,
-        edges: edges || [],
-      });
-      await universe.save();
+    if (!universe) {
+      return res.status(404).json({ error: 'Canvas not found' });
     }
     
     res.json({
+      _id: universe._id,
+      name: universe.name,
+      nodes: universe.nodes,
+      edges: universe.edges,
+      updatedAt: universe.updatedAt.getTime(),
+      createdAt: universe.createdAt?.getTime() || universe.updatedAt.getTime(),
+    });
+  } catch (err) {
+    console.error('Get universe error:', err);
+    res.status(500).json({ error: 'Server error fetching canvas' });
+  }
+});
+
+// Update specific canvas
+app.put('/api/universe/:id', authenticate, async (req, res) => {
+  try {
+    const { name, nodes, edges } = req.body;
+    
+    const universe = await Universe.findOne({
+      _id: req.params.id,
+      userId: req.user._id,
+    });
+    
+    if (!universe) {
+      return res.status(404).json({ error: 'Canvas not found' });
+    }
+    
+    // Update fields if provided
+    if (name !== undefined) universe.name = name;
+    if (nodes !== undefined) universe.nodes = nodes;
+    if (edges !== undefined) universe.edges = edges;
+    
+    await universe.save();
+    
+    res.json({
+      _id: universe._id,
+      name: universe.name,
       nodes: universe.nodes,
       edges: universe.edges,
       updatedAt: universe.updatedAt.getTime(),
     });
   } catch (err) {
-    console.error('Save universe error:', err);
-    res.status(500).json({ error: 'Server error saving universe' });
+    console.error('Update universe error:', err);
+    res.status(500).json({ error: 'Server error updating canvas' });
+  }
+});
+
+// Delete canvas
+app.delete('/api/universe/:id', authenticate, async (req, res) => {
+  try {
+    const result = await Universe.findOneAndDelete({
+      _id: req.params.id,
+      userId: req.user._id,
+    });
+    
+    if (!result) {
+      return res.status(404).json({ error: 'Canvas not found' });
+    }
+    
+    res.json({ success: true, message: 'Canvas deleted' });
+  } catch (err) {
+    console.error('Delete universe error:', err);
+    res.status(500).json({ error: 'Server error deleting canvas' });
   }
 });
 

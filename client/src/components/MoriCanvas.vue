@@ -1,26 +1,32 @@
 <script setup>
-import { computed, inject, onBeforeUnmount, onMounted, provide, ref, watch } from 'vue'
+import { computed, inject, markRaw, onBeforeUnmount, onMounted, provide, ref, watch } from 'vue'
 import { VueFlow, useVueFlow } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import MoriNode from './MoriNode.vue'
+import CanvasSwitcher from './CanvasSwitcher.vue'
 import { useCloudinary } from '../composables/useCloudinary'
 
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
-const STORAGE_KEY = 'mori:universe:v1'
+const STORAGE_KEY = 'mori:universe:v2'
 
 const nodes = ref([])
 const edges = ref([])
 const nodeCount = ref(1)
 const saveState = ref('idle') // idle | saving | saved | syncing | synced | offline
 const zoomPercent = ref(100)
-const nodeTypes = computed(() => ({ moriNode: MoriNode }))
+const nodeTypes = { moriNode: markRaw(MoriNode) }
 const viewportState = ref({ x: 0, y: 0, zoom: 1 })
 let restoring = false
 let localUpdatedAt = ref(0)
 const { fitView, setViewport, onViewportChange, screenToFlowCoordinate } = useVueFlow()
+
+// Multi-canvas state
+const currentCanvasId = ref(null) // null = local-only mode
+const currentCanvasName = ref('Local Canvas')
+const canvasList = ref([]) // [{_id, name, updatedAt, nodeCount}]
 
 // Inject auth from App.vue
 const auth = inject('auth', { isAuthenticated: ref(false), getAuthHeaders: () => ({}) })
@@ -77,11 +83,57 @@ const loadLocal = () => {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return null
     const parsed = JSON.parse(raw)
-    localUpdatedAt.value = parsed.updatedAt || 0
-    return {
-      nodes: ensureCore(parsed.nodes || []),
-      edges: parsed.edges || [],
-      updatedAt: parsed.updatedAt || 0,
+    
+    // Support both old v1 format and new v2 format
+    if (parsed.currentCanvasId !== undefined || parsed.canvases) {
+      // v2 format with multi-canvas
+      
+      // Load canvas list
+      canvasList.value = getAllLocalCanvases().sort((a, b) => b.updatedAt - a.updatedAt)
+      
+      // Determine which canvas to load
+      let canvasId = parsed.currentCanvasId
+      if (!canvasId && canvasList.value.length > 0) {
+        canvasId = canvasList.value[0]._id
+      }
+      
+      if (!canvasId) return null
+      
+      currentCanvasId.value = canvasId
+      const canvasData = parsed.canvases?.[canvasId]
+      if (!canvasData) return null
+      
+      localUpdatedAt.value = canvasData.updatedAt || 0
+      currentCanvasName.value = canvasData.name || 'Local Canvas'
+      return {
+        nodes: ensureCore(canvasData.nodes || []),
+        edges: canvasData.edges || [],
+        updatedAt: canvasData.updatedAt || 0,
+      }
+    } else {
+      // v1 legacy format - migrate to v2
+      const newCanvasId = generateLocalCanvasId()
+      localUpdatedAt.value = parsed.updatedAt || Date.now()
+      currentCanvasId.value = newCanvasId
+      currentCanvasName.value = 'My Canvas'
+      
+      // Save in new format
+      const canvasData = {
+        name: 'My Canvas',
+        nodes: ensureCore(parsed.nodes || []),
+        edges: parsed.edges || [],
+        updatedAt: localUpdatedAt.value,
+      }
+      saveLocalCanvas(newCanvasId, canvasData.name, canvasData.nodes, canvasData.edges, canvasData.updatedAt)
+      
+      // Update canvasList
+      canvasList.value = [{ _id: newCanvasId, name: 'My Canvas', updatedAt: localUpdatedAt.value, nodeCount: canvasData.nodes.length }]
+      
+      return {
+        nodes: canvasData.nodes,
+        edges: canvasData.edges,
+        updatedAt: canvasData.updatedAt,
+      }
     }
   } catch (err) {
     console.warn('Failed to load local data', err)
@@ -89,26 +141,170 @@ const loadLocal = () => {
   }
 }
 
-// Remote sync functions
-const fetchRemote = async () => {
-  if (!auth.isAuthenticated.value) return null
+// ============================================
+// Local Canvas Management (Offline Support)
+// ============================================
+
+// Generate unique ID for local canvases
+const generateLocalCanvasId = () => `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+
+// Get all canvases from localStorage
+const getAllLocalCanvases = () => {
   try {
-    const res = await fetch(`${API_BASE}/api/universe`, {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    if (!parsed.canvases) return []
+    return Object.entries(parsed.canvases).map(([id, data]) => ({
+      _id: id,
+      name: data.name || 'Untitled',
+      nodes: data.nodes || [],
+      edges: data.edges || [],
+      updatedAt: data.updatedAt || 0,
+      nodeCount: data.nodes?.length || 0,
+    }))
+  } catch (err) {
+    console.warn('Failed to get local canvases:', err)
+    return []
+  }
+}
+
+// Save a canvas to localStorage
+const saveLocalCanvas = (canvasId, name, canvasNodes, canvasEdges, updatedAt = Date.now()) => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    let data = {}
+    try {
+      data = raw ? JSON.parse(raw) : {}
+    } catch (e) {}
+    
+    if (!data.canvases) data.canvases = {}
+    data.canvases[canvasId] = {
+      name,
+      nodes: canvasNodes,
+      edges: canvasEdges,
+      updatedAt,
+    }
+    
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+  } catch (err) {
+    console.warn('Failed to save local canvas:', err)
+  }
+}
+
+// Delete a canvas from localStorage
+const deleteLocalCanvas = (canvasId) => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return
+    const data = JSON.parse(raw)
+    if (data.canvases && data.canvases[canvasId]) {
+      delete data.canvases[canvasId]
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+    }
+  } catch (err) {
+    console.warn('Failed to delete local canvas:', err)
+  }
+}
+
+// Rename a canvas in localStorage
+const renameLocalCanvas = (canvasId, newName) => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return
+    const data = JSON.parse(raw)
+    if (data.canvases && data.canvases[canvasId]) {
+      data.canvases[canvasId].name = newName
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+    }
+  } catch (err) {
+    console.warn('Failed to rename local canvas:', err)
+  }
+}
+
+// Replace a local canvas ID with a remote ID (after sync)
+const replaceLocalCanvasId = (oldId, newId) => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return
+    const data = JSON.parse(raw)
+    if (data.canvases && data.canvases[oldId]) {
+      data.canvases[newId] = data.canvases[oldId]
+      delete data.canvases[oldId]
+      if (data.currentCanvasId === oldId) {
+        data.currentCanvasId = newId
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+    }
+  } catch (err) {
+    console.warn('Failed to replace canvas ID:', err)
+  }
+}
+
+// ============================================
+// Multi-Canvas Remote API Functions
+// ============================================
+
+// Fetch list of all user's canvases
+const fetchCanvasList = async () => {
+  if (!auth.isAuthenticated.value) return []
+  try {
+    const res = await fetch(`${API_BASE}/api/universes`, {
       headers: auth.getAuthHeaders(),
     })
-    if (!res.ok) throw new Error('Failed to fetch')
+    if (!res.ok) throw new Error('Failed to fetch canvas list')
     return await res.json()
   } catch (err) {
-    console.warn('Failed to fetch remote:', err)
+    console.warn('Failed to fetch canvas list:', err)
+    return []
+  }
+}
+
+// Fetch a specific canvas by ID
+const fetchCanvas = async (canvasId) => {
+  if (!auth.isAuthenticated.value || !canvasId) return null
+  try {
+    const res = await fetch(`${API_BASE}/api/universe/${canvasId}`, {
+      headers: auth.getAuthHeaders(),
+    })
+    if (!res.ok) throw new Error('Failed to fetch canvas')
+    return await res.json()
+  } catch (err) {
+    console.warn('Failed to fetch canvas:', err)
     return null
   }
 }
 
-const pushRemote = async () => {
-  if (!auth.isAuthenticated.value) return
+// Create a new canvas
+const createCanvas = async (name, canvasNodes, canvasEdges) => {
+  if (!auth.isAuthenticated.value) return null
   try {
-    const res = await fetch(`${API_BASE}/api/universe`, {
+    const res = await fetch(`${API_BASE}/api/universes`, {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...auth.getAuthHeaders(),
+      },
+      body: JSON.stringify({
+        name: name || 'Untitled',
+        nodes: canvasNodes || nodes.value.map(sanitizeNode),
+        edges: canvasEdges || edges.value.map(sanitizeEdge),
+      }),
+    })
+    if (!res.ok) throw new Error('Failed to create canvas')
+    return await res.json()
+  } catch (err) {
+    console.warn('Failed to create canvas:', err)
+    return null
+  }
+}
+
+// Update current canvas
+const updateCanvas = async (canvasId) => {
+  if (!auth.isAuthenticated.value || !canvasId) return
+  try {
+    const res = await fetch(`${API_BASE}/api/universe/${canvasId}`, {
+      method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         ...auth.getAuthHeaders(),
@@ -116,22 +312,130 @@ const pushRemote = async () => {
       body: JSON.stringify({
         nodes: nodes.value.map(sanitizeNode),
         edges: edges.value.map(sanitizeEdge),
-        updatedAt: localUpdatedAt.value,
       }),
     })
-    if (!res.ok) {
-      const data = await res.json()
-      if (data.conflict) {
-        // Server has newer data - could prompt user, for now just log
-        console.warn('Conflict: server has newer data')
-      }
-    }
+    if (!res.ok) throw new Error('Failed to update canvas')
+    return await res.json()
   } catch (err) {
-    console.warn('Failed to push remote:', err)
+    console.warn('Failed to update canvas:', err)
   }
 }
 
-// Sync after user signs in - handles local-first with timestamp conflict resolution
+// Rename canvas
+const renameCanvas = async (canvasId, newName) => {
+  if (!auth.isAuthenticated.value || !canvasId) return
+  try {
+    const res = await fetch(`${API_BASE}/api/universe/${canvasId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...auth.getAuthHeaders(),
+      },
+      body: JSON.stringify({ name: newName }),
+    })
+    if (!res.ok) throw new Error('Failed to rename canvas')
+    const data = await res.json()
+    // Update local list
+    const idx = canvasList.value.findIndex(c => c._id === canvasId)
+    if (idx !== -1) canvasList.value[idx].name = newName
+    if (canvasId === currentCanvasId.value) currentCanvasName.value = newName
+    return data
+  } catch (err) {
+    console.warn('Failed to rename canvas:', err)
+  }
+}
+
+// Delete canvas
+const deleteCanvas = async (canvasId) => {
+  if (!auth.isAuthenticated.value || !canvasId) return
+  try {
+    const res = await fetch(`${API_BASE}/api/universe/${canvasId}`, {
+      method: 'DELETE',
+      headers: auth.getAuthHeaders(),
+    })
+    if (!res.ok) throw new Error('Failed to delete canvas')
+    
+    // Remove from list
+    canvasList.value = canvasList.value.filter(c => c._id !== canvasId)
+    
+    // If deleted current canvas, switch to another
+    if (canvasId === currentCanvasId.value) {
+      if (canvasList.value.length > 0) {
+        await switchCanvas(canvasList.value[0]._id)
+      } else {
+        // Create new default canvas
+        const newCanvas = await createCanvas('My Canvas')
+        if (newCanvas) {
+          canvasList.value = [{ _id: newCanvas._id, name: newCanvas.name, updatedAt: newCanvas.updatedAt, nodeCount: 1 }]
+          await switchCanvas(newCanvas._id)
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to delete canvas:', err)
+  }
+}
+
+// Switch to a different canvas
+const switchCanvas = async (canvasId) => {
+  restoring = true
+  saveState.value = 'saving'
+  
+  try {
+    // Save current canvas first
+    if (currentCanvasId.value) {
+      const sanitizedNodes = nodes.value.map(sanitizeNode)
+      const sanitizedEdges = edges.value.map(sanitizeEdge)
+      saveLocalCanvas(currentCanvasId.value, currentCanvasName.value, sanitizedNodes, sanitizedEdges, localUpdatedAt.value)
+      
+      // Also push to remote if authenticated
+      if (auth.isAuthenticated.value && !currentCanvasId.value.startsWith('local-')) {
+        await updateCanvas(currentCanvasId.value)
+      }
+    }
+    
+    // Load new canvas - first try from remote if authenticated and not a local ID
+    let canvas = null
+    if (auth.isAuthenticated.value && !canvasId.startsWith('local-')) {
+      canvas = await fetchCanvas(canvasId)
+    }
+    
+    // If no remote canvas, load from localStorage
+    if (!canvas) {
+      const localCanvases = getAllLocalCanvases()
+      canvas = localCanvases.find(c => c._id === canvasId)
+    }
+    
+    if (!canvas) {
+      console.warn('Canvas not found:', canvasId)
+      saveState.value = 'idle'
+      restoring = false
+      return
+    }
+    
+    // Load canvas data
+    currentCanvasId.value = canvas._id
+    currentCanvasName.value = canvas.name
+    nodes.value = ensureCore(canvas.nodes || [])
+    edges.value = canvas.edges || []
+    localUpdatedAt.value = canvas.updatedAt
+    recalcNodeCount(nodes.value)
+    
+    // Update localStorage
+    persistLocal()
+    
+    saveState.value = 'saved'
+    setTimeout(() => (saveState.value = 'idle'), 1000)
+    setTimeout(fitAll, 100)
+  } catch (err) {
+    console.warn('Switch canvas failed:', err)
+    saveState.value = 'offline'
+  } finally {
+    restoring = false
+  }
+}
+
+// Sync after user signs in - multi-canvas aware
 const syncAfterAuth = async () => {
   if (!auth.isAuthenticated.value) return
   
@@ -139,42 +443,166 @@ const syncAfterAuth = async () => {
   restoring = true
   
   try {
-    const remote = await fetchRemote()
+    // Fetch remote canvas list
+    const remoteList = await fetchCanvasList()
+    const localCanvases = getAllLocalCanvases()
     
-    if (!remote) {
-      // No remote data exists, push local to cloud
-      await pushRemote()
-      saveState.value = 'synced'
-      setTimeout(() => (saveState.value = 'idle'), 1000)
-      return
+    // Sync each local canvas
+    for (const localCanvas of localCanvases) {
+      const remote = remoteList.find(r => r._id === localCanvas._id)
+      
+      if (remote) {
+        // Canvas exists in both - compare timestamps, newer wins
+        if (localCanvas.updatedAt >= remote.updatedAt) {
+          // Local is newer - push to remote
+          await fetch(`${API_BASE}/api/universe/${remote._id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              ...auth.getAuthHeaders(),
+            },
+            body: JSON.stringify({
+              name: localCanvas.name,
+              nodes: localCanvas.nodes,
+              edges: localCanvas.edges,
+            }),
+          })
+        } else {
+          // Remote is newer - update local
+          const fullRemote = await fetchCanvas(remote._id)
+          if (fullRemote) {
+            saveLocalCanvas(remote._id, fullRemote.name, fullRemote.nodes, fullRemote.edges, fullRemote.updatedAt)
+          }
+        }
+      } else if (localCanvas._id.startsWith('local-')) {
+        // New local canvas - push to remote and update local ID
+        const newRemote = await createCanvas(localCanvas.name, localCanvas.nodes, localCanvas.edges)
+        if (newRemote) {
+          replaceLocalCanvasId(localCanvas._id, newRemote._id)
+          // If this was the current canvas, update the ID
+          if (currentCanvasId.value === localCanvas._id) {
+            currentCanvasId.value = newRemote._id
+          }
+        }
+      }
+      // If canvas has a non-local ID but doesn't exist in remote, keep it locally
+      // (it might have been deleted on another device, but user might want to keep it)
     }
     
-    // Compare timestamps - newer wins
-    if (localUpdatedAt.value >= remote.updatedAt) {
-      // Local is newer or same, push local to cloud
-      await pushRemote()
-      saveState.value = 'synced'
-    } else {
-      // Remote is newer, use remote data
-      nodes.value = ensureCore(remote.nodes || [])
-      edges.value = remote.edges || []
-      localUpdatedAt.value = remote.updatedAt
+    // Fetch any remote-only canvases (exist in remote but not locally)
+    for (const remote of remoteList) {
+      const existsLocally = localCanvases.some(l => l._id === remote._id)
+      if (!existsLocally) {
+        const fullRemote = await fetchCanvas(remote._id)
+        if (fullRemote) {
+          saveLocalCanvas(fullRemote._id, fullRemote.name, fullRemote.nodes, fullRemote.edges, fullRemote.updatedAt)
+        }
+      }
+    }
+    
+    // Reload canvas list from localStorage (now updated)
+    canvasList.value = getAllLocalCanvases().sort((a, b) => b.updatedAt - a.updatedAt)
+    
+    // If current canvas ID changed (was local-, now remote), reload it
+    const currentInList = canvasList.value.find(c => c._id === currentCanvasId.value)
+    if (currentInList) {
+      // Refresh current canvas data
+      const fullCanvas = await fetchCanvas(currentCanvasId.value) || currentInList
+      nodes.value = ensureCore(fullCanvas.nodes || [])
+      edges.value = fullCanvas.edges || []
+      currentCanvasName.value = fullCanvas.name
+      localUpdatedAt.value = fullCanvas.updatedAt
       recalcNodeCount(nodes.value)
-      // Save remote data to localStorage (already sanitized from server)
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ nodes: remote.nodes, edges: remote.edges, updatedAt: localUpdatedAt.value }),
-      )
-      saveState.value = 'synced'
-      setTimeout(fitAll, 100)
+    } else if (canvasList.value.length > 0) {
+      // Current canvas not found, switch to first one
+      await switchCanvas(canvasList.value[0]._id)
     }
     
+    // Update localStorage
+    persistLocal()
+    
+    saveState.value = 'synced'
     setTimeout(() => (saveState.value = 'idle'), 1000)
   } catch (err) {
     console.warn('Sync after auth failed:', err)
     saveState.value = 'offline'
   } finally {
     restoring = false
+  }
+}
+
+// Handle canvas switcher events
+const handleCanvasSwitch = (canvasId) => {
+  switchCanvas(canvasId)
+}
+
+const handleCanvasCreate = async () => {
+  // Create new canvas with just the default core node
+  const defaultNodes = [{
+    id: 'core',
+    type: 'moriNode',
+    position: { x: 0, y: 0 },
+    data: { label: 'Me', isCore: true, tilt: 0 },
+  }]
+  
+  let newCanvasId, newCanvasName
+  const now = Date.now()
+  
+  if (auth.isAuthenticated.value) {
+    // Online: create on server
+    const newCanvas = await createCanvas('New Canvas', defaultNodes, [])
+    if (newCanvas) {
+      newCanvasId = newCanvas._id
+      newCanvasName = newCanvas.name
+    }
+  } else {
+    // Offline: create locally
+    newCanvasId = generateLocalCanvasId()
+    newCanvasName = 'New Canvas'
+    saveLocalCanvas(newCanvasId, newCanvasName, defaultNodes, [], now)
+  }
+  
+  if (newCanvasId) {
+    canvasList.value.unshift({ _id: newCanvasId, name: newCanvasName, updatedAt: now, nodeCount: 1 })
+    await switchCanvas(newCanvasId)
+  }
+}
+
+const handleCanvasRename = async ({ id, name }) => {
+  // Always update locally first
+  renameLocalCanvas(id, name)
+  
+  // Update canvas list
+  const idx = canvasList.value.findIndex(c => c._id === id)
+  if (idx !== -1) canvasList.value[idx].name = name
+  if (id === currentCanvasId.value) currentCanvasName.value = name
+  
+  // Also update remote if authenticated and not a local ID
+  if (auth.isAuthenticated.value && !id.startsWith('local-')) {
+    await renameCanvas(id, name)
+  }
+}
+
+const handleCanvasDelete = async (canvasId) => {
+  // Delete locally first
+  deleteLocalCanvas(canvasId)
+  
+  // Remove from list
+  canvasList.value = canvasList.value.filter(c => c._id !== canvasId)
+  
+  // Also delete from remote if authenticated and not a local ID
+  if (auth.isAuthenticated.value && !canvasId.startsWith('local-')) {
+    await deleteCanvas(canvasId)
+  }
+  
+  // If deleted current canvas, switch to another
+  if (canvasId === currentCanvasId.value) {
+    if (canvasList.value.length > 0) {
+      await switchCanvas(canvasList.value[0]._id)
+    } else {
+      // Create new default canvas
+      await handleCanvasCreate()
+    }
   }
 }
 
@@ -459,19 +887,38 @@ const persistLocal = () => {
     localUpdatedAt.value = Date.now()
     const sanitizedNodes = nodes.value.map(sanitizeNode)
     const sanitizedEdges = edges.value.map(sanitizeEdge)
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ nodes: sanitizedNodes, edges: sanitizedEdges, updatedAt: localUpdatedAt.value }),
-    )
+    
+    // Build v2 localStorage structure
+    const canvasKey = currentCanvasId.value || 'local'
+    const existingRaw = localStorage.getItem(STORAGE_KEY)
+    let existingData = {}
+    try {
+      existingData = existingRaw ? JSON.parse(existingRaw) : {}
+    } catch (e) {}
+    
+    const storageData = {
+      currentCanvasId: currentCanvasId.value,
+      canvases: {
+        ...existingData.canvases,
+        [canvasKey]: {
+          name: currentCanvasName.value,
+          nodes: sanitizedNodes,
+          edges: sanitizedEdges,
+          updatedAt: localUpdatedAt.value,
+        },
+      },
+    }
+    
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(storageData))
     saveState.value = 'saved'
     setTimeout(() => (saveState.value = 'idle'), 1000)
     
     // Debounced push to remote
-    if (auth.isAuthenticated.value) {
+    if (auth.isAuthenticated.value && currentCanvasId.value) {
       if (remotePushTimer) clearTimeout(remotePushTimer)
       remotePushTimer = setTimeout(() => {
         saveState.value = 'syncing'
-        pushRemote().then(() => {
+        updateCanvas(currentCanvasId.value).then(() => {
           saveState.value = 'synced'
           setTimeout(() => (saveState.value = 'idle'), 1000)
         }).catch(() => {
@@ -506,30 +953,29 @@ onMounted(async () => {
     nodes.value = ensureCore(stored.nodes)
     edges.value = stored.edges
   } else {
-    nodes.value = ensureCore([])
+    // No stored data - create a default canvas
+    const defaultCanvasId = generateLocalCanvasId()
+    const defaultNodes = ensureCore([])
+    const now = Date.now()
+    
+    currentCanvasId.value = defaultCanvasId
+    currentCanvasName.value = 'My Canvas'
+    nodes.value = defaultNodes
     edges.value = []
+    localUpdatedAt.value = now
+    
+    // Save to localStorage
+    saveLocalCanvas(defaultCanvasId, 'My Canvas', defaultNodes, [], now)
+    canvasList.value = [{ _id: defaultCanvasId, name: 'My Canvas', updatedAt: now, nodeCount: 1 }]
+    
+    // Update currentCanvasId in localStorage
+    persistLocal()
   }
   recalcNodeCount(nodes.value)
   
-  // Then try to fetch remote if authenticated
+  // If already authenticated, sync with server
   if (auth.isAuthenticated.value) {
-    saveState.value = 'syncing'
-    const remote = await fetchRemote()
-    if (remote && remote.updatedAt > localUpdatedAt.value) {
-      // Remote is newer, use it
-      restoring = true
-      nodes.value = ensureCore(remote.nodes || [])
-      edges.value = remote.edges || []
-      localUpdatedAt.value = remote.updatedAt
-      // Save to local storage (remote data is already sanitized)
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ nodes: remote.nodes, edges: remote.edges, updatedAt: localUpdatedAt.value }),
-      )
-      recalcNodeCount(nodes.value)
-    }
-    saveState.value = 'synced'
-    setTimeout(() => (saveState.value = 'idle'), 1000)
+    await syncAfterAuth()
   }
   
   setTimeout(() => {
@@ -583,6 +1029,18 @@ provide('moriNodeActions', {
 
 <template>
   <section class="canvas-shell">
+    <div class="overlay header-left">
+      <CanvasSwitcher
+        :currentCanvasId="currentCanvasId"
+        :canvasList="canvasList"
+        :isAuthenticated="auth.isAuthenticated.value"
+        @switch="handleCanvasSwitch"
+        @create="handleCanvasCreate"
+        @rename="handleCanvasRename"
+        @delete="handleCanvasDelete"
+      />
+    </div>
+
     <div class="overlay controls">
       <button class="add-btn" type="button" @click="addNode">+ Add node</button>
     </div>
@@ -690,6 +1148,12 @@ provide('moriNodeActions', {
   font-weight: 750;
   letter-spacing: 0.01em;
   color: #1f2933;
+}
+
+.header-left {
+  top: 20px;
+  left: 22px;
+  pointer-events: auto;
 }
 
 .controls {

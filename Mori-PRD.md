@@ -37,6 +37,9 @@
 | 中心按钮 | ✅ Done | 点击重置视图到核心节点 |
 | 双击创建 | ✅ Done | 双击空白处创建新节点 |
 | 图片粘贴 | ✅ Done | 粘贴图片自动创建节点并上传 |
+| 多画布支持 | ✅ Done | 用户可拥有多个画布，通过下拉菜单切换 |
+| 画布管理 | ✅ Done | 创建、重命名、删除画布 |
+| 离线多画布 | ✅ Done | 未登录/离线状态也支持多画布管理 |
 
 ### 2. 节点 (Node)
 
@@ -81,10 +84,10 @@
 | 用户注册 | ✅ Done | 邮箱 + 密码注册 |
 | 用户登录 | ✅ Done | JWT token 认证 |
 | 云端存储 | ✅ Done | MongoDB Atlas 存储 |
-| 自动同步 | ✅ Done | 登录后自动同步到云端 |
-| 登录后同步 | ✅ Done | 用户登录时自动触发同步，比较本地与云端时间戳 |
-| 冲突处理 | ✅ Done | 时间戳比较，较新数据优先（local >= remote 则推送，否则拉取） |
-| 离线模式 | ✅ Done | 离线时显示 Offline mode |
+| 自动同步 | ✅ Done | 登录后自动同步所有画布到云端 |
+| 全量同步 | ✅ Done | 登录时同步所有本地画布：ID匹配则时间戳决定胜负，本地新画布推送到云端 |
+| 多画布同步 | ✅ Done | 每个画布独立同步，切换画布时自动保存 |
+| 离线模式 | ✅ Done | 离线时完整多画布功能，登录后自动同步 |
 
 ### 6. 媒体 (Media)
 
@@ -102,7 +105,7 @@
 ### 布局
 ```
 ┌─────────────────────────────────────────────────┐
-│ [Sign in]                        [+ Add node]   │
+│ [Canvas ▼][+]  [Sign in]         [+ Add node]   │
 ├─────────────────────────────────────────────────┤
 │                                                 │
 │                   [Core: Me]                    │
@@ -133,12 +136,20 @@
 | POST | `/api/auth/login` | 用户登录 |
 | GET | `/api/auth/me` | 获取当前用户 |
 
-### 数据
+### 画布 (Multi-Canvas)
 
 | 方法 | 路径 | 描述 |
 |------|------|------|
-| GET | `/api/universe` | 获取用户画布数据 |
-| POST | `/api/universe` | 保存用户画布数据 |
+| GET | `/api/universes` | 获取用户所有画布列表 |
+| POST | `/api/universes` | 创建新画布 |
+| GET | `/api/universe/:id` | 获取指定画布数据 |
+| PUT | `/api/universe/:id` | 更新指定画布 |
+| DELETE | `/api/universe/:id` | 删除画布 |
+
+### 系统
+
+| 方法 | 路径 | 描述 |
+|------|------|------|
 | GET | `/api/health` | 健康检查 |
 
 ---
@@ -156,11 +167,12 @@
 }
 ```
 
-### Universe
+### Universe (Canvas)
 ```javascript
 {
   _id: ObjectId,
-  userId: ObjectId (ref User),
+  userId: ObjectId (ref User),  // 用户可拥有多个画布
+  name: String,                 // 画布名称
   nodes: [{
     id: String,
     type: 'moriNode',
@@ -169,8 +181,7 @@
       label: String,
       tilt: Number,
       isCore: Boolean,
-      image: String (URL),
-      isNew: Boolean
+      image: String (URL)
     }
   }],
   edges: [{
@@ -179,6 +190,7 @@
     target: String,
     style: Object
   }],
+  createdAt: Date,
   updatedAt: Date
 }
 ```
@@ -228,6 +240,22 @@ NODE_ENV=development
 ---
 
 ## 更新日志
+
+### 2024-12-08 (v6)
+- **离线多画布支持**：未登录/离线状态也支持完整的多画布管理
+- 新增本地画布管理函数：`generateLocalCanvasId()`, `getAllLocalCanvases()`, `saveLocalCanvas()`, `deleteLocalCanvas()`, `renameLocalCanvas()`, `replaceLocalCanvasId()`
+- 登录同步逻辑升级：同步所有本地画布到云端
+  - ID 匹配的画布：比较时间戳，较新者胜
+  - 本地新画布（local-前缀）：推送到云端，更新本地 ID
+  - 云端独有画布：下载到本地
+- 移除 `isLocalEmpty()` 空画布检查逻辑
+
+### 2024-12-08 (v5)
+- **多画布支持**：用户可拥有多个画布，通过下拉菜单切换
+- 新增 CanvasSwitcher 组件：创建、重命名、删除画布
+- 更新 Universe schema：添加 name, createdAt 字段，移除 userId unique 约束
+- 新增 API endpoints：GET/POST `/api/universes`，GET/PUT/DELETE `/api/universe/:id`
+- localStorage 升级到 v2 格式，支持多画布缓存
 
 ### 2024-12-08 (v4)
 - 优化数据存储：新增 `sanitizeNode()` 和 `sanitizeEdge()` 函数
