@@ -21,6 +21,7 @@ RUN bun ci --production
 
 # 4. Code and assets
 COPY server.js ./
+COPY models/ ./models/
 COPY --from=client-builder /app/client/dist ./client/dist
 
 ENV NODE_ENV=production

@@ -1,17 +1,20 @@
 {
   "name": "mori",
   "version": "1.0.0",
-  "type": "module", 
+  "type": "module",
   "main": "server.js",
   "scripts": {
     "start": "bun server.js",
-    "server": "bun --watch server.js", 
+    "server": "bun --watch server.js",
     "client": "cd client && bun run dev",
     "dev": "concurrently \"bun run server\" \"bun run client\""
   },
   "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cloudinary": "^2.8.0",
     "cors": "^2.8.5",
     "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.2",
     "mongoose": "^9.0.0"
   },
   "devDependencies": {
