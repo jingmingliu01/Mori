@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8">
         <title>Jingming Liu's CV</title>
-        <link rel="stylesheet" href="/styles.css">
+        <link rel="stylesheet" href="styles.css">
     </head>
     <body>
         <nav>
@@ -25,10 +25,9 @@
                         </a>
                     </div>
                 </div>
-                <img src="/assets/jingming.jpeg" alt="Selfie Image">
-                <p>Hi, I’m Jingming Liu. I’m currently doing my MS in Computer Science in the US, and before that I studied Software Engineering in China. I really enjoy building things with code, and I’ve worked with Python, C++, Java, and many other frameworks.<br><br>
-                    I’ve also had some hands-on industry experience. For example, at Anker Innovations I helped manage the development of a smart security camera, making sure the hardware and software came together smoothly. At Tecdo Technology, I worked as a product manager on a B2B SaaS platform, where we improved features that directly boosted our clients’ prodcuctivity.<br><br>
-                    What excites me most is combining technical problem-solving with product thinking to create useful, scalable solutions. I’m looking forward to bringing that mindset to new challenges in the future.</p>
+                <img src="assets/jingming.jpeg" alt="Selfie Image">
+                <p>Hi, I'm Jingming Liu. I'm currently doing my MS in Computer Science in the US, and before that I studied Software Engineering in China. I really enjoy building things with code, and I've worked with Python, C++, Java, and many other frameworks.<br><br>
+                    What excites me most is combining technical problem-solving with product thinking to create useful, scalable solutions. I'm looking forward to bringing that mindset to new challenges in the future.</p>
             </section>
             <section id="about-xichi">
                 <div class="aboutme-header">
@@ -56,6 +55,16 @@
             <section id="projects">
                 <h1>Projects</h1>
                 <div class="projects-title">
+                    <h2>Mori - A Local-First Infinite Canvas Web App<a href="https://github.com/jingmingliu01/Mori" target="_blank" class="social-link github-link">
+                        <span class="link-icon">🐱</span>GitHub</a></h2>
+                </div>
+                <ul>
+                    <li>Developed a local-first sync architecture handling offline/online transitions, implementing timestamp-based conflict resolution that syncs localStorage with MongoDB Atlas.</li>
+                    <li>Implemented RESTful APIs for user authentication (JWT) and CRUD operations on canvases, utilizing async/await patterns with Express.js middleware for token validation and user data isolation.</li>
+                    <li>Built an interactive infinite canvas UI using Vue 3 Composition API with Vue Flow, featuring reactive state management(ref/watch/computed) and debounced auto-save (300ms).</li>
+                    <li>Integrated Cloudinary for image uploads, supporting paste-to-upload functionality and automatic image URL detection/rendering within nodes.</li>
+                </ul>
+                <div class="projects-title">
                     <h2>Build a Tiny GPT from Scratch<a href="https://github.com/jingmingliu01/build-a-tiny-GPT-from-scratch" target="_blank" class="social-link github-link">
                         <span class="link-icon">🐱</span>GitHub</a></h2>
                     <div class="project-date">April 2025</div>
@@ -65,44 +74,28 @@
                     <li>Developed an instructional slides <a href=#attention-as-context-summary>Attention as Context Summary</a> to introduce the Attention mechanism to beginners, using intuitive explanations and step-by-step visualizations to facilitate conceptual understanding.</li>
                     <li>Wrote accessible technical articles <a href=#language-model-01>Language Model 01: From Bigram, N-gram to GPT</a> explaining how different statistical and neural models address the key challenges of language modeling.</li>
                 </ul>
-                <div class="projects-title">
-                    <h2>Sudoku Helper<a href="https://github.com/jingmingliu01/Sudoku-Helper" target="_blank" class="social-link github-link">
-                        <span class="link-icon">🐱</span>GitHub</a></h2>
-                    <div class="project-date">Dec 2024</div>
-                </div>
-                <ul>
-                    <li>Designed and implemented a full-featured Sudoku solver/assistant in modern C++ using clean object-oriented architecture to enforce game constraints, supporting both traditional and diagonal Sudoku variants.</li>
-                    <li>Developed robust file I/O and menu-driven CLI (mark/undo/redo) to manage puzzles; integrated error handling and test puzzles for reliability.</li>
-                    <li>Built portable cross-platform project with CMake and unit-tested core logic to ensure maintainability and scalability.</li>
-                </ul>
+                
             </section>
             <section id="experience">
                 <h1>Experience</h1>
                 <div class="experience-title-title">
-                    <h2>Anker Innovations Co., Ltd.</h2>
-                    <div class="experience-date">May 2024 - Jun 2024</div>
+                    <h2>Vicino, Inc.</h2>
+                    <div class="experience-date">Oct. 2025 – present</div>
                 </div>
-                <h3 class="experience-title">Project Manager</h3>
+                <h3 class="experience-title">SDE Intern</h3>
                 <ul>
-                    <li>Orchestrated the Anker Eufy Security Indoor Camera project, managing both hardware and software development, and ensuring seamless software-hardware integration.</li>
-                    <li>Successfully led the project from the EVT (Engineering Verification Test) phase to the PVT (Production Validation Test) phase, ensuring design robustness and readiness for mass production.</li>
+                    <li>Optimized API request performance by implementing AbortController and debounce mechanisms using React hooks (useEffect, useCallback) to intelligently cancel redundant pending requests and defer rapid successive calls, reducing network overhead and improving request responsiveness.</li>
+                    <li>Integrated Cloudflare Turnstile for bot mitigation with server-side verification, strengthening API request integrity with minimal user friction.</li>
                 </ul>
                 <div class="experience-title-title">
                     <h2>Tecdo Technology Co., Ltd.</h2>
-                    <div class="experience-date">Aug 2023 - Nov 2023</div>
+                    <div class="experience-date">Aug. 2023 – Nov. 2023</div>
                 </div>
-                <h3 class="experience-title">Product Manager</h3>
+                <h3 class="experience-title">SDE</h3>
                 <ul>
-                    <li>Managed the B2B SaaS product focusing on module design, implementing Agile methodology, leading to a significant increase in customers’ expenditure on TikTok (82% increase) and Facebook (67% increase).</li>
-                    <li>Designed and developed an efficiency management module, achieving 96% user satisfaction rate.</li>
-                </ul>
-                <div class="experience-title-title">
-                    <h2>Changzhi Network Technologies Co., Ltd.</h2>
-                    <div class="experience-date">Apr 2023 - Jun 2023</div>
-                </div>
-                <h3 class="experience-title">Product Manager Intern</h3>
-                <ul>
-                    <li>Designed an ad allocation strategy by framing multi-slot ad display as scheduling problem, applying principles from Operating System to improve efficiency and user engagement.</li>
+                    <li>Developed a TikTok Ads API integration module in Node.js that automated batch import of ad campaigns from Excel, validated through integration testing to support up to 120 campaigns per batch.</li>
+                    <li>Improved robustness by implementing Excel data validation (type checks, required field enforcement, range constraints) and comprehensive error-handling (automatic retries with exponential backoff, detailed failure logs for manual review).</li>
+                    <li>Optimized API request handling with asynchronous programming(Promise, await, rest) and controlled concurrency (rate-limit guards) to prevent overload and maintain stable batch throughput.</li>
                 </ul>
             </section>
             <section id="articles">

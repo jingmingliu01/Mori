@@ -81,6 +81,11 @@ section {
     "img text";
 }
 
+#aboutme > p {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
 #about-xichi {
     display: none;
 }
