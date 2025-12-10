@@ -1,0 +1,342 @@
+/* Jingming's CV Styles */
+
+* {
+    box-sizing: border-box;
+    /* box-sizing: content-box; */
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    line-height: 1.5;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+    color: #333;
+}
+
+/* Navigation Bar Styles */
+nav {
+    background-color: #f4f4f4;
+    border: 2px solid #f4f4f4;
+    padding: 10px;
+    margin: 20px;
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+}
+
+nav a {
+    text-decoration: none;
+    color: black;
+    padding: 10px 20px;
+    border: 1px solid black;
+    background-color: white;
+    text-align: center;
+    /* float: left;
+    width: 25%;
+    margin: 0; */
+    transition: background-color 0.3s ease;
+}
+
+nav a:hover {
+    background-color: #f0f0f0;
+}
+
+/* Main content area */
+main {
+    max-width: 800px;
+    margin: 0 auto;
+    background-color: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+
+    display: grid;
+    grid-template-columns: 1fr;
+    /* justify-items: left; */
+}
+
+/* Section spacing */
+section {
+    margin-bottom: 40px;
+    display: grid;
+    grid-template-columns: 1fr;
+}
+
+/* Clear floats inside sections so following sections don't wrap around images */
+/* Removed clearfix rule */
+
+/* Removed section::after */
+
+/* Removed section::after rule */
+
+/* Removed section::after rule */
+
+#aboutme {
+    margin-bottom: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+    grid-template-areas: 
+    "header header"
+    "img text";
+}
+
+#about-xichi {
+    display: none;
+}
+
+/* About Me Header Layout */
+.aboutme-header {
+    margin-bottom: 20px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    grid-area: header;
+}
+
+.aboutme-header h1 {
+    margin: 0;
+}
+
+.social-links {
+    margin-top: 5px;
+    justify-self: end;
+}
+
+.aboutme-header img {
+    grid-area: img;
+}
+.aboutme-header p {
+    grid-area: text;
+}
+
+.social-link {
+    display: inline-block;
+    padding: 8px 16px;
+    background-color: #f8f9fa;
+    color: #495057;
+    text-decoration: none;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+.social-link:hover {
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.github-link:hover {
+    background-color: #e3f2fd;
+    color: #0077b5;
+}
+
+.linkedin-link:hover {
+    background-color: #e3f2fd;
+    color: #0077b5;
+}
+
+.link-icon {
+    font-size: 1.1em;
+}
+
+h1 {
+    text-align: left;
+    font-size: 2em;
+    margin: 20px 0;
+}
+
+h2 {
+    text-align: left;
+    font-size: 1.5em;
+    margin: 10px 0;
+}
+
+.experience-title {
+    text-align: left;
+    font-size: 1em;
+    margin: 10px 0;
+}
+
+.projects-title {
+    display: grid;
+    grid-template-columns: auto auto;
+}
+
+/* Project date styling */
+.project-date {
+    color: #7f8c8d;
+    font-size: 1rem;
+    font-weight: normal;
+    background-color: #ecf0f1;
+    padding: 3px 8px;
+    border-radius: 10px;
+    justify-self: end;
+    align-self: center;
+    /* display: inline-block; */
+}
+
+.experience-title-title {
+    display: grid;
+    grid-template-columns: auto auto;
+}
+
+/* Experience date styling */
+.experience-date {
+    color: #7f8c8d;
+    font-size: 1rem;
+    font-weight: normal;
+    background-color: #ecf0f1;
+    padding: 3px 8px;
+    border-radius: 10px;
+    justify-self: end;
+    align-self: center;
+    display: inline-block;
+}
+
+/* Image styles */
+img {
+    max-width: 250px;
+    max-height: 300px;
+    width: auto;
+    height: auto;
+    border-radius: 10px;
+    /* box-shadow: 0 4px 8px rgba(0,0,0,0.1); */
+    display: block;
+    margin-right: 20px;
+    justify-self: start;
+}
+
+section:last-child {
+    margin-bottom: 0;
+}
+
+/* Articles Section Styles - Using Grid */
+.articles-container {
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+}
+
+.article-card {
+    background-color: white;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    padding: 20px;
+    width: 100%;
+}
+
+.article-card h3 {
+    color: #333;
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 1.3em;
+}
+
+.article-date {
+    color: #7f8c8d;
+    font-size: 0.8em;
+    width: fit-content;
+    font-weight: normal;
+    background-color: #ecf0f1;
+    padding: 3px 8px;
+    border-radius: 10px;
+}
+
+.article-description {
+    color: #555;
+    line-height: 1.5;
+    margin-bottom: 15px;
+}
+
+.article-link {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.article-link:hover {
+    color: #0056b3;
+    text-decoration: underline;
+}
+
+.paper-title {
+    font-style: italic;
+    font-size: 1.1em;
+    font-family: 'Times New Roman', Times, serif;
+}
+
+/* Responsive design */
+@media (max-width: 900px) {
+    nav {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        margin: 10px;
+    }
+
+    nav a {
+        margin: 2px 0;
+        width: 100%;
+    }
+
+    h1 {
+        font-size: clamp(1.5rem, 4vw, 2em);
+        margin: 10px 0;
+    }
+
+    h2 {
+        font-size: clamp(1.2rem, 3vw, 1.5em);
+        margin: 8px 0;
+    }
+
+    main {
+        margin: 10px;
+        padding: 20px;
+    }
+
+    .article-card {
+        width: 100%;
+        margin-right: 0;
+    }
+
+    /* Responsive About Me layout */
+    #aboutme {
+        grid-template-columns: 1fr;
+        grid-template-areas: 
+            "header"
+            "img"
+            "text";
+    }
+
+    .aboutme-header {
+        grid-template-columns: 1fr;
+    }
+
+    .aboutme-header h1 {
+        margin-bottom: 10px;
+    }
+
+    .social-links {
+        margin-top: 0;
+        justify-self: start;
+    }
+
+    .social-link {
+        font-size: 0.85em;
+        padding: 6px 12px;
+        margin-left: 0;
+        margin-right: 8px;
+        margin-bottom: 5px;
+    }
+
+    img {
+        max-width: 100%;
+        height: auto;
+    }
+}
