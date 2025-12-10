@@ -13,10 +13,32 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'mori-secret-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET
+if (!JWT_SECRET) {
+  console.error('❌ JWT_SECRET environment variable is not set!');
+  console.error('   Make sure you have a .env file in the project root with JWT_SECRET=...');
+  process.exit(1);
+}else{
+  console.log('✅ JWT_SECRET environment variable is set!');
+}
 
 // 1. Middleware
-app.use(cors());
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    
+    if (
+      origin === 'http://localhost:3001' ||
+      origin.endsWith('.netlify.app')
+    ) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+}));
+
 app.use(express.json());
 
 // 2. Connect to MongoDB Atlas
