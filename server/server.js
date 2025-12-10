@@ -8,21 +8,64 @@ import { v2 as cloudinary } from 'cloudinary';
 import User from './models/User.js';
 import Universe from './models/Universe.js';
 
+// ============================================
+// Configuration & Constants
+// ============================================
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET
+
+// JWT Secret validation
+const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
   console.error('❌ JWT_SECRET environment variable is not set!');
   console.error('   Make sure you have a .env file in the project root with JWT_SECRET=...');
   process.exit(1);
-}else{
+} else {
   console.log('✅ JWT_SECRET environment variable is set!');
 }
 
-// 1. Middleware
+// ============================================
+// External Services Connection
+// ============================================
+
+// MongoDB Atlas
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+  console.error('❌ MONGODB_URI environment variable is not set!');
+  console.error('   Make sure you have a .env file in the project root with MONGODB_URI=your_connection_string');
+} else {
+  mongoose.connect(MONGODB_URI)
+    .then(() => console.log('✅ MongoDB Connected!'))
+    .catch(err => {
+      console.error('❌ MongoDB Connection Error:', err.message);
+      console.error('   Connection string starts with:', MONGODB_URI.substring(0, 20) + '...');
+    });
+}
+
+// Cloudinary
+const CLOUDINARY_URL = process.env.CLOUDINARY_URL;
+if (!CLOUDINARY_URL) {
+  console.error('❌ CLOUDINARY_URL environment variable is not set!');
+  console.error('   Make sure you have a .env file in the project root with CLOUDINARY_URL=cloudinary://...');
+} else {
+  // Cloudinary auto-configures from CLOUDINARY_URL env var
+  cloudinary.api.ping()
+    .then(() => console.log('✅ Cloudinary Connected!'))
+    .catch(err => {
+      console.error('❌ Cloudinary Connection Error:', err.message);
+      console.error('   Check your CLOUDINARY_URL credentials');
+    });
+}
+
+// ============================================
+// Middleware
+// ============================================
+
+// CORS - Cross-Origin Resource Sharing
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
@@ -39,38 +82,16 @@ app.use(cors({
   credentials: true,
 }));
 
+// JSON body parser
 app.use(express.json());
 
-// 2. Connect to MongoDB Atlas
-const MONGODB_URI = process.env.MONGODB_URI;
-if (!MONGODB_URI) {
-  console.error('❌ MONGODB_URI environment variable is not set!');
-  console.error('   Make sure you have a .env file in the project root with MONGODB_URI=your_connection_string');
-} else {
-  mongoose.connect(MONGODB_URI)
-    .then(() => console.log('✅ MongoDB Connected!'))
-    .catch(err => {
-      console.error('❌ MongoDB Connection Error:', err.message);
-      console.error('   Connection string starts with:', MONGODB_URI.substring(0, 20) + '...');
-    });
-}
+// Static files
+app.use(express.static(path.join(__dirname, 'public')));
 
-// 3. Connect to Cloudinary
-const CLOUDINARY_URL = process.env.CLOUDINARY_URL;
-if (!CLOUDINARY_URL) {
-  console.error('❌ CLOUDINARY_URL environment variable is not set!');
-  console.error('   Make sure you have a .env file in the project root with CLOUDINARY_URL=cloudinary://...');
-} else {
-  // Cloudinary auto-configures from CLOUDINARY_URL env var
-  cloudinary.api.ping()
-    .then(() => console.log('✅ Cloudinary Connected!'))
-    .catch(err => {
-      console.error('❌ Cloudinary Connection Error:', err.message);
-      console.error('   Check your CLOUDINARY_URL credentials');
-    });
-}
+// ============================================
+// Auth Middleware (Route-level)
+// ============================================
 
-// Auth middleware
 const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -93,7 +114,11 @@ const authenticate = async (req, res, next) => {
   }
 };
 
-// Helper to create default core node
+// ============================================
+// Helper Functions
+// ============================================
+
+// Create default core node for new universe
 const createDefaultUniverse = (name = 'My First Canvas') => ({
   name,
   nodes: [
@@ -107,14 +132,28 @@ const createDefaultUniverse = (name = 'My First Canvas') => ({
   edges: [],
 });
 
-// 3. API routes
+// ============================================
+// Routes: Static Pages
+// ============================================
 
-// Health check
+// Home page
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// ============================================
+// Routes: Health Check
+// ============================================
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Mori Backend is running!' });
 });
 
-// Auth: Sign up
+// ============================================
+// Routes: Authentication
+// ============================================
+
+// Sign up
 app.post('/api/auth/signup', async (req, res) => {
   try {
     const { email, password, name } = req.body;
@@ -138,7 +177,7 @@ app.post('/api/auth/signup', async (req, res) => {
     });
     await universe.save();
     
-    const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '30d' });
+    const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '7d' });
     
     res.status(201).json({
       user: user.toJSON(),
@@ -150,7 +189,7 @@ app.post('/api/auth/signup', async (req, res) => {
   }
 });
 
-// Auth: Login
+// Login
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -181,13 +220,13 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Auth: Get current user
+// Get current user (requires auth)
 app.get('/api/auth/me', authenticate, (req, res) => {
   res.json({ user: req.user.toJSON() });
 });
 
 // ============================================
-// Multi-Canvas API Endpoints
+// Routes: Universe (Canvas) CRUD
 // ============================================
 
 // List all user's canvases (metadata only)
@@ -319,18 +358,20 @@ app.delete('/api/universe/:id', authenticate, async (req, res) => {
   }
 });
 
-// ----------------------------------------------------
-// 4. Production hosting (Deployment Magic)
-// ----------------------------------------------------
+// ============================================
+// Routes: Fallback (SPA Support)
+// ============================================
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, 'client/dist')));
-
+  // Catch-all route for production
   app.get(/.*/, (req, res) => {
-    res.sendFile(path.join(__dirname, 'client', 'dist', 'index.html'));
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
   });
 }
 
-// Start the server
+// ============================================
+// Start Server
+// ============================================
+
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });

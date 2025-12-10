@@ -20,8 +20,9 @@ COPY server/package.json server/bun.lock ./
 RUN bun ci --production
 
 # 4. Code and assets
-COPY server/server.js ./
+COPY server/public/ ./public/
 COPY server/models/ ./models/
+COPY server/server.js ./
 # COPY --from=client-builder /app/client/dist ./client/dist
 
 ENV NODE_ENV=production

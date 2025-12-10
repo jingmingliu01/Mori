@@ -142,3 +142,4 @@ vite.config.ts.timestamp-*
 .cursor/
 .vscode/
 .DS_Store
+.CLAUDE.md

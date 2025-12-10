@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Jingming Liu's CV</title>
+        <link rel="stylesheet" href="styles.css">
+    </head>
+    <body>
+        <nav>
+            <a href="#aboutme">About Me</a>
+            <a href="#projects">Projects</a>
+            <a href="#experience">Experience</a>
+            <a href="#articles">Articles</a>
+        </nav>
+        <main>
+            <section id="aboutme">
+                <div class="aboutme-header">
+                    <h1>About Me</h1>
+                    <div class="social-links">
+                        <a href="https://github.com/jingmingliu01" target="_blank" class="social-link github-link">
+                            <span class="link-icon">🐱</span>GitHub
+                        </a>
+                        <a href="https://www.linkedin.com/in/jingmingliu" target="_blank" class="social-link linkedin-link">
+                            <span class="link-icon">💼</span>LinkedIn
+                        </a>
+                    </div>
+                </div>
+                <img src="assets/jingming.jpeg" alt="Selfie Image">
+                <p>Hi, I'm Jingming Liu. I'm currently doing my MS in Computer Science in the US, and before that I studied Software Engineering in China. I really enjoy building things with code, and I've worked with Python, C++, Java, and many other frameworks.<br><br>
+                    What excites me most is combining technical problem-solving with product thinking to create useful, scalable solutions. I'm looking forward to bringing that mindset to new challenges in the future.</p>
+            </section>
+            <section id="about-xichi">
+                <div class="aboutme-header">
+                    <h1>About My Girlfriend</h1>
+                    <div class="social-links">
+                        <!-- <a href="https://github.com/jingmingliu01" target="_blank" class="social-link github-link">
+                            <span class="link-icon">🐱</span>GitHub
+                        </a>
+                        <a href="https://www.linkedin.com/in/jingmingliu" target="_blank" class="social-link linkedin-link">
+                            <span class="link-icon">💼</span>LinkedIn
+                        </a> -->
+                    </div>
+                </div>
+                <img src="/assets/xichi.jpeg" alt="Xichi's Image">
+                <p>鸂鶒之歌：
+                    <br><br>
+                    鸂鶒飞得高又狂 (kuáng)，湖面上它称霸王 (wáng)
+                    <br><br>
+                    溪水驰骋像银光 (guāng)，冲刷掉我心中伤 (shāng)
+                    <br><br>
+                    鸡翅烤得金黄亮 (liàng)，蘸料调味我最强 (qiáng)
+                    <br><br>
+                    Money in my pocket响叮当 (dāng)，生活就要这么狂 (kuáng)</p>
+            </section>
+            <section id="projects">
+                <h1>Projects</h1>
+                <div class="projects-title">
+                    <h2>Mori - A Local-First Infinite Canvas Web App<a href="https://github.com/jingmingliu01/Mori" target="_blank" class="social-link github-link">
+                        <span class="link-icon">🐱</span>GitHub</a></h2>
+                </div>
+                <ul>
+                    <li>Developed a local-first sync architecture handling offline/online transitions, implementing timestamp-based conflict resolution that syncs localStorage with MongoDB Atlas.</li>
+                    <li>Implemented RESTful APIs for user authentication (JWT) and CRUD operations on canvases, utilizing async/await patterns with Express.js middleware for token validation and user data isolation.</li>
+                    <li>Built an interactive infinite canvas UI using Vue 3 Composition API with Vue Flow, featuring reactive state management(ref/watch/computed) and debounced auto-save (300ms).</li>
+                    <li>Integrated Cloudinary for image uploads, supporting paste-to-upload functionality and automatic image URL detection/rendering within nodes.</li>
+                </ul>
+                <div class="projects-title">
+                    <h2>Build a Tiny GPT from Scratch<a href="https://github.com/jingmingliu01/build-a-tiny-GPT-from-scratch" target="_blank" class="social-link github-link">
+                        <span class="link-icon">🐱</span>GitHub</a></h2>
+                    <div class="project-date">April 2025</div>
+                </div>
+                <ul>
+                    <li>Implemented a lightweight GPT-style language model based on the seminal NLP paper <span class="paper-title">Attention Is All You Need</span>, building it from scratch to deepen understanding of language model internals and training dynamics.</li>
+                    <li>Developed an instructional slides <a href=#attention-as-context-summary>Attention as Context Summary</a> to introduce the Attention mechanism to beginners, using intuitive explanations and step-by-step visualizations to facilitate conceptual understanding.</li>
+                    <li>Wrote accessible technical articles <a href=#language-model-01>Language Model 01: From Bigram, N-gram to GPT</a> explaining how different statistical and neural models address the key challenges of language modeling.</li>
+                </ul>
+                
+            </section>
+            <section id="experience">
+                <h1>Experience</h1>
+                <div class="experience-title-title">
+                    <h2>Vicino, Inc.</h2>
+                    <div class="experience-date">Oct. 2025 – present</div>
+                </div>
+                <h3 class="experience-title">SDE Intern</h3>
+                <ul>
+                    <li>Optimized API request performance by implementing AbortController and debounce mechanisms using React hooks (useEffect, useCallback) to intelligently cancel redundant pending requests and defer rapid successive calls, reducing network overhead and improving request responsiveness.</li>
+                    <li>Integrated Cloudflare Turnstile for bot mitigation with server-side verification, strengthening API request integrity with minimal user friction.</li>
+                </ul>
+                <div class="experience-title-title">
+                    <h2>Tecdo Technology Co., Ltd.</h2>
+                    <div class="experience-date">Aug. 2023 – Nov. 2023</div>
+                </div>
+                <h3 class="experience-title">SDE</h3>
+                <ul>
+                    <li>Developed a TikTok Ads API integration module in Node.js that automated batch import of ad campaigns from Excel, validated through integration testing to support up to 120 campaigns per batch.</li>
+                    <li>Improved robustness by implementing Excel data validation (type checks, required field enforcement, range constraints) and comprehensive error-handling (automatic retries with exponential backoff, detailed failure logs for manual review).</li>
+                    <li>Optimized API request handling with asynchronous programming(Promise, await, rest) and controlled concurrency (rate-limit guards) to prevent overload and maintain stable batch throughput.</li>
+                </ul>
+            </section>
+            <section id="articles">
+                <h1>Articles</h1>
+                <div class="articles-container">
+                    <div class="article-card" id="attention-as-context-summary">
+                        <h3> Attention as Context Summary</h3>
+                        <p class="article-date">April 2025</p>
+                        <p class="article-description">Introduce the Attention mechanism to beginners, using intuitive explanations and step-by-step visualizations to facilitate conceptual understanding.</p>
+                        <a href="https://github.com/jingmingliu01/Intro-to-AI/blob/main/Articles/Attention%20as%20Context%20Summary.pdf" target="_blank" class="article-link">Read Full Article</a>
+                    </div>
+                    
+                    <div class="article-card" id="language-model-01">
+                        <h3>Language Model 01: From Bigram, N-gram to GPT</h3>
+                        <p class="article-date">March 2025</p>
+                        <p class="article-description">Can the problem of Natural Language Processing(NLP) be modeled using Markov?<br>
+                            What troubles will it encounter? What is a better way?<br><br>
+                            Based on these questions, this article will discuss several language models: Bigram, n-gram and GPT, and focus on the Transformer architecture on which GPT is based, as well as the attention mechanism and some other details.<br><br>
+                            Read this article, patience is all you need!</p>
+                        <a href="https://github.com/jingmingliu01/Intro-to-AI/blob/main/Articles/Language%20Model%2001_%20From%20Bigram%2C%20n-gram%20to%20GPT%20%E2%80%94%20How%20do%20they%20respond%20to%20the%20core%20issues%20of%20language%20modeling_%20---%20%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B01_%20%E4%BB%8EBigram%E3%80%81n-gram%E5%88%B0GPT%E2%80%94%E2%80%94%E5%AE%83%E4%BB%AC%E5%A6%82%E4%BD%95%E5%9B%9E%E5%BA%94%E8%AF%AD%E8%A8%80%E5%BB%BA%E6%A8%A1%E7%9A%84%E6%A0%B8%E5%BF%83%E9%97%AE%E9%A2%98%EF%BC%9F.pdf" target="_blank" class="article-link">Read Full Article</a>
+                    </div>
+                    
+                    <div class="article-card" id="modeling-love">
+                        <h3>Modeling love: Markov decision process, Bellman equation, value iteration and strategy iteration</h3>
+                        <p class="article-date">March 2025</p>
+                        <p class="article-description">In order to make it easier to understand Markov Decision Process(MDP), this article takes LOVE as an example, explains step by step from scratch what MDP is, and uses value iteration and policy iteration to solve the optimal strategy for LOVE.</p>
+                        <a href="https://github.com/jingmingliu01/Intro-to-AI/blob/main/Articles/Modeling%20love_%20Markov%20decision%20process%2C%20Bellman%20equation%2C%20value%20iteration%20and%20strategy%20iteration%20---%20%E5%AF%B9%E6%81%8B%E7%88%B1%E5%BB%BA%E6%A8%A1%EF%BC%9A%E9%A9%AC%E5%B0%94%E5%8F%AF%E5%A4%AB%E5%86%B3%E7%AD%96%E8%BF%87%E7%A8%8B%E3%80%81Bellman%E6%96%B9%E7%A8%8B%E3%80%81%E4%BB%B7%E5%80%BC%E8%BF%AD%E4%BB%A3%E5%92%8C%E7%AD%96%E7%95%A5%E8%BF%AD%E4%BB%A3.pdf" target="_blank" class="article-link">Read Full Article</a>
+                    </div>
+
+                    <div class="article-card" id="the-symphony-of-the-eighteenth-century-and-the-modern-times">
+                        <h3>The Symphony of the Eighteenth Century and the Modern Times: Chain Rule, Bayesian Networks and Hume —— Probability, Correlation and Causation</h3>
+                        <p class="article-date">March 2025</p>
+                        <p class="article-description">What's the relation between Probability, Correlation, and Causation?<br>
+                        What's Chain Rule and Bayesian Networks?<br>
+                        How these concepts are related to Hume's problem?<br><br>
+                        There is a symphony of the eighteenth century and the modern times!</p>
+                        <a href="https://github.com/jingmingliu01/Intro-to-AI/blob/main/Articles/The%20Symphony%20of%20the%20Eighteenth%20Century%20and%20the%20Modern%20Times_%20Chain%20Rule%2C%20Bayesian%20Networks%2C%20and%20Hume%20-%20Probability%2C%20Correlation%2C%20and%20Causation%20---%20%E5%8D%81%E5%85%AB%E4%B8%96%E7%BA%AA%E4%B8%8E%E7%8E%B0%E4%BB%A3%E7%9A%84%E4%BA%A4%E5%93%8D%EF%BC%9A%E9%93%BE%E5%BC%8F%E6%B3%95%E5%88%99%E3%80%81%E8%B4%9D%E5%8F%B6%E6%96%AF%E7%BD%91%E7%BB%9C%E5%92%8C%E4%BC%91%E8%B0%9F%E2%80%94%E2%80%94%E6%A6%82%E7%8E%87%E3%80%81%E7%9B%B8%E5%85%B3%E5%92%8C%E5%9B%A0%E6%9E%9C.pdf" target="_blank" class="article-link">Read Full Article</a>
+                    </div>
+
+                    <div class="article-card" id="throwing-the-bayesian-dice">
+                        <h3>Throwing the Bayesian dice: Sampling —— Starting from the Monte Carlo method</h3>
+                        <p class="article-date">March 2025</p>
+                        <p class="article-description">I think that in order to spread knowledge with the least resistance, we should try our best to avoid presupposing a priori knowledge that is irrelevant to the problem.<br><br>
+                            The best philosophy is the philosophy that even kids can also understand. The same is true for the best physics/mathematics/... But since the world is already like this, let us at least understand it better.<br><br>
+                            This article will start with the Monte Carlo Method and then introduce several Monte Carlo method variants for sampling in Bayesian networks.</p>
+                        <a href="https://github.com/jingmingliu01/Intro-to-AI/blob/main/Articles/Throwing%20the%20Bayesian%20dice_%20Sampling%20(approximate%20inference)%20%E2%80%94%20Starting%20from%20the%20Monte%20Carlo%20method%20---%20%E6%89%94%E4%B8%80%E6%89%94%E8%B4%9D%E5%8F%B6%E6%96%AF%E7%9A%84%E9%AA%B0%E5%AD%90%EF%BC%9A%E9%87%87%E6%A0%B7%EF%BC%88%E8%BF%91%E4%BC%BC%E6%8E%A8%E6%96%AD%EF%BC%89%E2%80%94%E2%80%94%E4%BB%8E%E8%92%99%E7%89%B9%E5%8D%A1%E6%B4%9B%E6%96%B9%E6%B3%95%E8%AF%B4%E8%B5%B7.pdf" target="_blank" class="article-link">Read Full Article</a>
+                    </div>
+                </div>
+            </section>
+            
+        </main>
+    </body>
+</html>
